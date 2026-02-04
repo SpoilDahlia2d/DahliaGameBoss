@@ -298,7 +298,7 @@ window.toggleGallery = function () {
 
 /* REWARD CONFIGURATION (User Edits This) */
 const REWARD_DATA = [
-    { level: 1, type: 'image', src: 'assets/reward_1.jpg' },
+    { level: 1, type: 'image', src: 'assets/boss_1.jpg' },
     { level: 50, type: 'video', src: 'assets/reward_2.mp4' }, // Example Video
     { level: 100, type: 'image', src: 'assets/reward_3.jpg' },
     // Add more here...
