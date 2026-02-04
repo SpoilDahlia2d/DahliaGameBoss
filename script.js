@@ -296,6 +296,14 @@ window.toggleGallery = function () {
     renderGallery();
 }
 
+/* REWARD CONFIGURATION (User Edits This) */
+const REWARD_DATA = [
+    { level: 1, type: 'image', src: 'assets/reward_1.jpg' },
+    { level: 50, type: 'video', src: 'assets/reward_2.mp4' }, // Example Video
+    { level: 100, type: 'image', src: 'assets/reward_3.jpg' },
+    // Add more here...
+];
+
 function renderGallery() {
     const grid = document.getElementById('gallery-grid');
     grid.innerHTML = "";
@@ -304,14 +312,31 @@ function renderGallery() {
 
     for (let i = 1; i <= TOTAL_SLOTS; i++) {
         const item = document.createElement('div');
+
+        // Find specific reward for this slot (mapped 1-10 to levels 50-500 usually, but simplified here)
+        // For now, let's say Slot 1 = Reward 1, etc.
+        const reward = REWARD_DATA[i - 1] || { type: 'image', src: `assets/reward_${i}.jpg` };
+
         if (i <= GAME.photosUnlocked) {
             // UNLOCKED
             item.className = 'gallery-item unlocked';
-            // Placeholder for real image: In prod use `assets/reward_${i}.jpg`
-            item.innerHTML = `<img>`;
-            // item.querySelector('img').src = `assets/reward_${i}.jpg`; // Uncomment when files exist
-            item.innerHTML = `<span style="font-size:1rem">PHOTO ${i}</span>`; // Temp text
-            item.onclick = () => alert(`Viewing Photo ${i} (Zoom logic here)`);
+
+            if (reward.type === 'video') {
+                item.innerHTML = `
+                    <video src="${reward.src}" controls style="width:100%; height:100%; object-fit:cover;"></video>
+                    <span style="font-size:0.8rem; position:absolute; bottom:5px; left:5px; background:#000;">VIDEO ${i}</span>
+                `;
+            } else {
+                item.innerHTML = `
+                    <img src="${reward.src}" style="width:100%; height:100%; object-fit:cover;">
+                    <span style="font-size:0.8rem; position:absolute; bottom:5px; left:5px; background:#000;">PHOTO ${i}</span>
+                `;
+            }
+
+            // Zoom click
+            item.onclick = (e) => {
+                if (e.target.tagName !== 'VIDEO') alert(`Viewing Reward ${i}`);
+            };
         } else {
             // LOCKED
             item.className = 'gallery-item locked';
@@ -362,6 +387,15 @@ function updateBossUI() {
     lvlDisplay.innerText = GAME.level;
     hpTextMax.innerText = GAME.maxHP;
     document.getElementById('boss-name').innerText = GAME.bossData.name;
+
+    // DYNAMIC BOSS IMAGE
+    // Naming convention: boss_1.jpg, boss_2.jpg, etc.
+    // Uses modulo 10 to cycle through 10 boss images indefinitely
+    const bossIndex = (GAME.level % 10) || 10;
+    // bossImg.src = `assets/boss_${bossIndex}.jpg`; // UNCOMMENT THIS LINE WHEN FILES ARE READY
+
+    // For now, keep placeholder but log it
+    // console.log("Would load:", `assets/boss_${bossIndex}.jpg`);
 
     updateUI();
 }
@@ -421,6 +455,13 @@ window.closeModals = function () {
 window.onload = function () {
     init();
     renderStartGallery();
+
+    // Add interaction listener to unlock AudioContext
+    document.addEventListener('click', function () {
+        if (AudioSys.ctx && AudioSys.ctx.state === 'suspended') {
+            AudioSys.ctx.resume();
+        }
+    }, { once: true });
 };
 
 window.onload = init;
