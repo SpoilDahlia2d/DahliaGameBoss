@@ -163,23 +163,35 @@ function enemyAttack() {
     const enemyDmg = Math.floor(10 + (GAME.level * 1.5));
 
     GAME.playerHP -= enemyDmg;
+    if (GAME.playerHP < 0) GAME.playerHP = 0;
 
-    // Visuals on Screen (Shake the whole UI?)
+    // Visuals on Screen (Camera Shake + Red Flash)
     document.body.style.backgroundColor = '#550000';
-    setTimeout(() => document.body.style.backgroundColor = 'var(--dark-bg)', 100);
+    document.getElementById('game-ui').style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
 
-    createFloater(`TOOK ${enemyDmg} DMG!`, '#ff0000', true); // Red Text
+    setTimeout(() => {
+        document.body.style.backgroundColor = 'var(--dark-bg)';
+        document.getElementById('game-ui').style.transform = 'none';
+    }, 100);
+
+    createFloater(`-${enemyDmg} HP`, '#ff0000', true);
 
     updateUI();
 
     if (GAME.playerHP <= 0) {
-        alert("YOU DIED! PAY TO REVIVE OR RESTART LEVEL.");
-        GAME.playerHP = GAME.playerMaxHP; // Mercy reset for now
+        // Player Died
+        setTimeout(() => {
+            alert("YOU DIED! \n(Mercy Revive... for now)");
+            GAME.playerHP = GAME.playerMaxHP;
+            updateUI();
+            GAME.isPlayerTurn = true;
+            moveGrid.classList.remove('disabled');
+        }, 500);
+    } else {
+        // Continue
+        GAME.isPlayerTurn = true;
+        moveGrid.classList.remove('disabled');
     }
-
-    // Back to Player
-    GAME.isPlayerTurn = true;
-    moveGrid.classList.remove('disabled');
 }
 
 function handleVictory() {
@@ -203,6 +215,42 @@ function handleVictory() {
 }
 
 /* VISUAL HELPERS */
+function spawnParticles(x, y) {
+    for (let i = 0; i < 8; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+
+        // Random direction
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 50 + Math.random() * 50;
+        const mx = Math.cos(angle) * dist + 'px';
+        const my = Math.sin(angle) * dist + 'px';
+
+        p.style.setProperty('--mx', mx);
+        p.style.setProperty('--my', my);
+
+        particleLayer.appendChild(p);
+        setTimeout(() => p.remove(), 600);
+    }
+}
+
+function showTaunt() {
+    const taunts = [
+        "WEAK!", "PATHETIC!", "MORE!", "IS THAT IT?", "TRY HARDER!",
+        "MY NAIL IS HARDER", "GOOD BOY", "BEG FOR ME", "USELESS"
+    ];
+    const text = taunts[Math.floor(Math.random() * taunts.length)];
+
+    const bubble = document.createElement('div');
+    bubble.className = 'boss-dialogue';
+    bubble.innerText = text;
+    bossContainer.appendChild(bubble);
+
+    setTimeout(() => bubble.remove(), 2000);
+}
+
 function animateHit(el, isCrit) {
     el.classList.remove('hit-shake');
     void el.offsetWidth;
@@ -220,6 +268,50 @@ function createFloater(text, color, isPlayerHit = false) {
     setTimeout(() => el.remove(), 800);
 }
 
+/* GALLERY LOGIC */
+window.toggleGallery = function () {
+    const modal = document.getElementById('gallery-modal');
+    modal.classList.remove('hidden');
+    renderGallery();
+}
+
+function renderGallery() {
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = "";
+
+    const TOTAL_SLOTS = 10;
+
+    for (let i = 1; i <= TOTAL_SLOTS; i++) {
+        const item = document.createElement('div');
+        if (i <= GAME.photosUnlocked) {
+            // UNLOCKED
+            item.className = 'gallery-item unlocked';
+            // Placeholder for real image: In prod use `assets/reward_${i}.jpg`
+            item.innerHTML = `<img>`;
+            // item.querySelector('img').src = `assets/reward_${i}.jpg`; // Uncomment when files exist
+            item.innerHTML = `<span style="font-size:1rem">PHOTO ${i}</span>`; // Temp text
+            item.onclick = () => alert(`Viewing Photo ${i} (Zoom logic here)`);
+        } else {
+            // LOCKED
+            item.className = 'gallery-item locked';
+            item.innerHTML = `🔒<br><span style="font-size:0.5rem">LVL ${i * 50}</span>`;
+        }
+        grid.appendChild(item);
+    }
+}
+
+function renderMiniGallery() {
+    const bar = document.getElementById('mini-gallery');
+    if (!bar) return;
+    bar.innerHTML = "";
+
+    for (let i = 1; i <= 10; i++) {
+        const slot = document.createElement('div');
+        slot.className = i <= GAME.photosUnlocked ? 'mini-slot unlocked' : 'mini-slot';
+        bar.appendChild(slot);
+    }
+}
+
 /* UI UPDATES */
 function updateUI() {
     // Boss HP
@@ -228,16 +320,21 @@ function updateUI() {
     hpTextCur.innerText = Math.ceil(Math.max(0, GAME.currentHP));
 
     // Player HP
-    const pPct = Math.max(0, (GAME.playerHP / GAME.playerMaxHP) * 100);
-    playerHPFill.style.width = pPct + '%';
-    playerHPCur.innerText = Math.ceil(Math.max(0, GAME.playerHP));
-    playerHPMax.innerText = GAME.playerMaxHP;
+    // Check if element exists to avoid crash
+    if (playerHPFill) {
+        const pPct = Math.max(0, (GAME.playerHP / GAME.playerMaxHP) * 100);
+        playerHPFill.style.width = pPct + '%';
+        playerHPCur.innerText = Math.ceil(Math.max(0, GAME.playerHP));
+        playerHPMax.innerText = GAME.playerMaxHP;
+    }
 
     // Energy
     const enPct = Math.max(0, (GAME.energy / GAME.maxEnergy) * 100);
     energyBarFill.style.width = enPct + '%';
 
     currDisplay.innerText = GAME.money;
+
+    renderMiniGallery(); // Update Homepage Gallery
 }
 
 function updateBossUI() {
@@ -245,10 +342,39 @@ function updateBossUI() {
     hpTextMax.innerText = GAME.maxHP;
     document.getElementById('boss-name').innerText = GAME.bossData.name;
 
-    // TODO: Dynamic Image Source based on Level
-    // bossImg.src = `assets/boss_${GAME.level % 10}.jpg`; 
-
     updateUI();
 }
+
+/* START GAME LOGIC */
+window.startGame = function () {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-ui').classList.remove('hidden');
+}
+
+function renderStartGallery() {
+    const grid = document.getElementById('start-gallery-grid');
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    // Using same logic but for Start Screen
+    for (let i = 1; i <= 10; i++) {
+        const item = document.createElement('div');
+        if (i <= GAME.photosUnlocked) {
+            item.className = 'gallery-item unlocked';
+            item.innerHTML = `<span style="font-size:1rem">PHOTO ${i}</span>`;
+        } else {
+            // BLURRED & GRAYSCALE EFFECT
+            item.className = 'gallery-item locked';
+            item.style.filter = "grayscale(1) blur(2px)";
+            item.innerHTML = `🔒`;
+        }
+        grid.appendChild(item);
+    }
+}
+
+window.onload = function () {
+    init();
+    renderStartGallery();
+};
 
 window.onload = init;
