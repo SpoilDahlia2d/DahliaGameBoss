@@ -10,6 +10,7 @@ const GAME = {
     energy: 100, maxEnergy: 100,
 
     isCharged: false,
+    isShielded: false, // Defense mechanic
     isPlayerTurn: true, // Turn Logic
 
     bossData: { name: "INITIATE", hp: 100 }
@@ -160,7 +161,14 @@ function endPlayerTurn() {
 
 function enemyAttack() {
     // Enemy Dmg Scaling
-    const enemyDmg = Math.floor(10 + (GAME.level * 1.5));
+    let enemyDmg = Math.floor(10 + (GAME.level * 1.5));
+
+    // CHECK SHIELD
+    if (GAME.isShielded) {
+        enemyDmg = Math.floor(enemyDmg / 4); // Reduces damage by 75%
+        createFloater("BLOCKED!", "#00ff00", true);
+        GAME.isShielded = false; // Reset
+    }
 
     GAME.playerHP -= enemyDmg;
     if (GAME.playerHP < 0) GAME.playerHP = 0;
