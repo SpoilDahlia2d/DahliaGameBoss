@@ -105,30 +105,36 @@ window.useMove = function (moveType) {
             cost = 5;
             if (GAME.energy < cost) { alert("LOW ENERGY"); return; }
             damage = 10 + (GAME.level * 2);
-            GAME.isCharged = false;
             break;
 
         case 'worship':
+            // MECHANIC CHANGE: EARN MONEY
             cost = 10;
             if (GAME.energy < cost) { alert("LOW ENERGY"); return; }
-            damage = 0;
-            GAME.isCharged = true;
-            createFloater("CHARGED!", '#ffff00');
+
+            const earned = 10 + (GAME.level * 5);
+            GAME.money += earned;
+            createFloater(`+${earned} 💎`, '#ffd700');
             break;
 
         case 'beg':
-            GAME.energy = Math.min(GAME.maxEnergy, GAME.energy + 40);
-            damage = 1;
-            createFloater("+STAMINA", '#00ff00');
+            // MECHANIC CHANGE: SHIELD / DEFENSE
+            cost = 15;
+            if (GAME.energy < cost) { alert("LOW ENERGY"); return; }
+
+            GAME.isShielded = true; // Sets flag for enemy turn
+            createFloater("SHIELD UP!", '#00ff00');
             break;
 
         case 'pay':
-            cost = 50;
-            if (GAME.energy < cost) { alert("NEED 50 EN!"); return; }
-            damage = 100 + (GAME.level * 10);
-            if (GAME.isCharged) damage *= 3;
-            isCrit = true;
-            break;
+            // MECHANIC CHANGE: LINK + NO ATTACK
+            // 1. Open Throne
+            const link = document.getElementById('throne-btn-link').href;
+            window.open(link, '_blank');
+
+            // 2. Open Modal for Code
+            document.getElementById('throne-modal').classList.remove('hidden');
+            return;
     }
 
     GAME.energy -= cost;
@@ -137,6 +143,13 @@ window.useMove = function (moveType) {
         GAME.currentHP -= damage;
         animateHit(bossContainer, isCrit);
         createFloater(isCrit ? `CRIT ${damage}!` : `${damage}`, isCrit ? '#00ffff' : '#fff');
+
+        // Visuals
+        const btn = document.querySelector(`#btn-${moveType}`);
+        if (btn) {
+            const rect = btn.getBoundingClientRect();
+            spawnParticles(rect.left + rect.width / 2, rect.top);
+        }
     }
 
     updateUI();
