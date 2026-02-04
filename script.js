@@ -393,6 +393,31 @@ function renderStartGallery() {
     }
 }
 
+/* REDEMPTION LOGIC */
+window.redeemCode = function () {
+    const input = document.getElementById('throne-code-input');
+    const code = input.value.toUpperCase().trim();
+    const validCodes = ["HEALME", "QUEEN", "DAHLIA", "PIGGY", "THANKYOU"];
+
+    if (validCodes.includes(code)) {
+        GAME.playerHP = GAME.playerMaxHP; // Full Heal
+        GAME.money += 500; // Bonus Money
+
+        alert("OFFERING ACCEPTED. LIFE RESTORED.");
+        closeModals();
+        updateUI();
+        saveGame();
+        input.value = ""; // Clear input
+    } else {
+        alert("INVALID CODE. PAY FIRST.");
+    }
+}
+
+window.closeModals = function () {
+    document.getElementById('gallery-modal').classList.add('hidden');
+    document.getElementById('throne-modal').classList.add('hidden');
+}
+
 window.onload = function () {
     init();
     renderStartGallery();
