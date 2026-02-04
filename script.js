@@ -15,26 +15,33 @@ const GAME = {
     bossData: { name: "INITIATE", hp: 100 }
 };
 
-/* ELEMENTS */
-const bossContainer = document.getElementById('boss-container');
-const bossImg = document.getElementById('boss-img');
-const hpBarFill = document.getElementById('hp-bar-fill');
-const hpTextCur = document.getElementById('hp-current');
-const hpTextMax = document.getElementById('hp-max');
-
-const playerHPFill = document.getElementById('player-hp-fill');
-const playerHPCur = document.getElementById('player-hp-cur');
-const playerHPMax = document.getElementById('player-hp-max');
-
-const lvlDisplay = document.getElementById('level-display');
-const currDisplay = document.getElementById('currency-amount');
-const energyBarFill = document.getElementById('energy-bar-fill');
-const particleLayer = document.getElementById('particle-layer');
-const floaterLayer = document.getElementById('floater-layer');
-const moveGrid = document.querySelector('.move-grid');
+/* ELEMENTS - Get these AFTER window load */
+let bossContainer, bossImg, hpBarFill, hpTextCur, hpTextMax;
+let playerHPFill, playerHPCur, playerHPMax;
+let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGrid;
 
 /* INIT */
 function init() {
+    // Bind Elements
+    bossContainer = document.getElementById('boss-container');
+    bossImg = document.getElementById('boss-img');
+    hpBarFill = document.getElementById('hp-bar-fill');
+    hpTextCur = document.getElementById('hp-current');
+    hpTextMax = document.getElementById('hp-max');
+
+    playerHPFill = document.getElementById('player-hp-fill');
+    playerHPCur = document.getElementById('player-hp-cur');
+    playerHPMax = document.getElementById('player-hp-max');
+
+    lvlDisplay = document.getElementById('level-display');
+    currDisplay = document.getElementById('currency-amount');
+    energyBarFill = document.getElementById('energy-bar-fill');
+    particleLayer = document.getElementById('particle-layer');
+    floaterLayer = document.getElementById('floater-layer');
+    moveGrid = document.querySelector('.move-grid');
+
+    if (!playerHPFill) console.error("PLAYER HP UI MISSING!");
+
     loadGame();
     updateBossUI();
 }
