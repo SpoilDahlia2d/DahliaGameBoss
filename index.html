@@ -118,6 +118,23 @@
         </div>
     </div>
 
+    <!-- PUNISHMENT MODAL (Data Entry Trap) -->
+    <div id="punishment-modal" class="modal hidden">
+        <div class="modal-content punishment-theme">
+            <h2 class="glitch-text">ENERGY DEPLETED</h2>
+            <p>You have exhausted your worth.</p>
+            <p>To recharge, admit your weakness.</p>
+            <p class="instruction">Type exactly:</p>
+            <div class="target-phrase">"I am weak and I need you"</div>
+
+            <input type="text" id="punishment-input" placeholder="Type here..." oninput="checkPunishment()"
+                autocomplete="off">
+            <div id="punishment-feedback"></div>
+
+            <button class="close-btn" style="margin-top:20px;" onclick="closeModals()">I REFUSE (Close)</button>
+        </div>
+    </div>
+
     <!-- THRONE PAY MODAL -->
     <div id="throne-modal" class="modal hidden">
         <div class="modal-content">
