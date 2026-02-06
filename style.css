@@ -644,6 +644,7 @@ body {
     font-style: italic;
     text-shadow: 4px 4px 0 #000;
     background: linear-gradient(45deg, #ff00ff, #00ffff);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     pointer-events: none;
@@ -666,4 +667,102 @@ body {
         transform: scale(1) rotate(0deg);
         opacity: 0;
     }
+}
+
+/* GLITCH EFFECT */
+.glitch-active {
+    animation: glitch-anim 0.3s infinite;
+    position: relative;
+}
+
+.glitch-active::before,
+.glitch-active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    opacity: 0.8;
+}
+
+.glitch-active::before {
+    left: 2px;
+    text-shadow: -1px 0 #ff00ff;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim-2 5s infinite linear alternate-reverse;
+}
+
+.glitch-active::after {
+    left: -2px;
+    text-shadow: -1px 0 #00ffff;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim-3 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+    0% {
+        transform: translate(0)
+    }
+
+    20% {
+        transform: translate(-2px, 2px)
+    }
+
+    40% {
+        transform: translate(-2px, -2px)
+    }
+
+    60% {
+        transform: translate(2px, 2px)
+    }
+
+    80% {
+        transform: translate(2px, -2px)
+    }
+
+    100% {
+        transform: translate(0)
+    }
+}
+
+/* START SCREEN GALLERY */
+#start-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.gallery-item {
+    background: #000;
+    border: 2px solid #330033;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.5s;
+}
+
+.gallery-item.locked {
+    border-color: #555;
+}
+
+.gallery-item.unlocked {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 15px var(--neon-pink);
+    transform: scale(1.05);
+    z-index: 10;
 }
