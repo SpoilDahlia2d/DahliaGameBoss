@@ -21,19 +21,36 @@ let bossContainer, bossImg, hpBarFill, hpTextCur, hpTextMax;
 let playerHPFill, playerHPCur, playerHPMax;
 let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGrid;
 
-/* AUDIO SYSTEM (Synthesized) */
+/* AUDIO SYSTEM (Hybrid: Files + Synth Fallback) */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const SOUNDS = {
-    hit: { type: 'sawtooth', freq: 100, dur: 0.1, vol: 0.5, slide: -50 },
-    coin: { type: 'sine', freq: 1200, dur: 0.3, vol: 0.3, slide: 0 },
-    shield: { type: 'square', freq: 200, dur: 0.4, vol: 0.2, slide: -100 },
-    levelUp: { type: 'sine', freq: 400, dur: 0.5, vol: 0.4, slide: 800 }
+const SOUNDS_CONFIG = {
+    hit: { file: 'assets/hit.mp3', synth: { type: 'sawtooth', freq: 100, dur: 0.1, vol: 0.5, slide: -50 } },
+    coin: { file: 'assets/coin.mp3', synth: { type: 'sine', freq: 1200, dur: 0.3, vol: 0.3, slide: 0 } },
+    shield: { file: 'assets/shield.mp3', synth: { type: 'square', freq: 200, dur: 0.4, vol: 0.2, slide: -100 } },
+    levelUp: { file: 'assets/levelup.mp3', synth: { type: 'sine', freq: 400, dur: 0.5, vol: 0.4, slide: 800 } },
+    welcome: { file: 'assets/welcome.mp3', synth: { type: 'sine', freq: 600, dur: 1.0, vol: 0.3, slide: -200 } } // New Welcome Sound
 };
+
+const audioCache = {};
 
 function playSound(name) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
-    const s = SOUNDS[name];
+    // Try to play file if loaded
+    if (audioCache[name]) {
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioCache[name];
+        source.connect(audioCtx.destination);
+        source.start(0);
+        return;
+    }
+
+    // Fallback to Synth
+    playSynth(name);
+}
+
+function playSynth(name) {
+    const s = SOUNDS_CONFIG[name].synth;
     if (!s) return;
 
     const osc = audioCtx.createOscillator();
@@ -55,8 +72,27 @@ function playSound(name) {
     osc.stop(audioCtx.currentTime + s.dur);
 }
 
+function preloadAudio() {
+    Object.keys(SOUNDS_CONFIG).forEach(key => {
+        const url = SOUNDS_CONFIG[key].file;
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("No file");
+                return response.arrayBuffer();
+            })
+            .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                audioCache[key] = audioBuffer;
+                console.log(`Audio Loaded: ${key}`);
+            })
+            .catch(() => console.log(`Using Synth for: ${key}`));
+    });
+}
+
 /* INIT */
 function init() {
+    preloadAudio();
+
     // Bind Elements
     bossContainer = document.getElementById('boss-container');
     bossImg = document.getElementById('boss-img');
@@ -114,15 +150,44 @@ function scaleBoss() {
 }
 
 /* SHOP LOGIC */
+/* SHOP LOGIC */
 window.buyStamina = function () {
-    if (GAME.money >= 20) {
-        GAME.money -= 20;
+    // TRAP: Instead of buying, force data entry
+    const modal = document.getElementById('punishment-modal');
+    modal.classList.remove('hidden');
+
+    // Reset Input
+    const input = document.getElementById('punishment-input');
+    input.value = "";
+    document.getElementById('punishment-feedback').innerText = "";
+    input.focus();
+}
+
+window.checkPunishment = function () {
+    const input = document.getElementById('punishment-input');
+    const feedback = document.getElementById('punishment-feedback');
+    const target = "I am weak and I need you";
+
+    const val = input.value;
+
+    // Check for mistakes instantly
+    if (!target.startsWith(val)) {
+        feedback.innerText = "WRONG. RESTART.";
+        feedback.style.color = "red";
+        playSound('hit'); // Wrong sound
+        input.value = ""; // Cruel reset
+        triggerGlitch(); // Punish visually
+        return;
+    }
+
+    if (val === target) {
+        // Success
         GAME.energy = GAME.maxEnergy;
-        alert("STAMINA RECHARGED!");
+        playSound('levelUp'); // Success sound
+        alert("GOOD PUPPY. ENERGY RESTORED.");
+        closeModals();
         updateUI();
         saveGame();
-    } else {
-        alert("NEED 20 GEMS!");
     }
 }
 
@@ -460,6 +525,28 @@ function updateBossUI() {
 window.startGame = function () {
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-ui').classList.remove('hidden');
+
+    // Play Welcome Voice (Once)
+    playSound('welcome');
+
+    // Start BGM (Loop)
+    playMusic();
+}
+
+function playMusic() {
+    const bgmPath = 'assets/bgm.mp3';
+    // Check if we already have it in cache or just load it
+    // For BGM, we use an Audio element for easier looping handling
+    if (!window.bgmAudio) {
+        window.bgmAudio = new Audio(bgmPath);
+        window.bgmAudio.loop = true;
+        window.bgmAudio.volume = 0.4;
+
+        // Failsafe: if file missing, it just won't play (silent fail)
+        window.bgmAudio.play().catch(e => console.log("BGM not found or blocked: " + e));
+    } else {
+        window.bgmAudio.play();
+    }
 }
 
 function renderStartGallery() {
@@ -478,6 +565,11 @@ function renderStartGallery() {
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'cover';
+
+        // FAILSAFE: If boss_2, boss_3 etc don't exist, show boss_1
+        img.onerror = function () {
+            this.src = 'assets/boss_1.jpg';
+        };
 
         if (i <= GAME.photosUnlocked) {
             item.classList.add('unlocked');
