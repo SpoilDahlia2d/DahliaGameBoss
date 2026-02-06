@@ -21,6 +21,40 @@ let bossContainer, bossImg, hpBarFill, hpTextCur, hpTextMax;
 let playerHPFill, playerHPCur, playerHPMax;
 let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGrid;
 
+/* AUDIO SYSTEM (Synthesized) */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const SOUNDS = {
+    hit: { type: 'sawtooth', freq: 100, dur: 0.1, vol: 0.5, slide: -50 },
+    coin: { type: 'sine', freq: 1200, dur: 0.3, vol: 0.3, slide: 0 },
+    shield: { type: 'square', freq: 200, dur: 0.4, vol: 0.2, slide: -100 },
+    levelUp: { type: 'sine', freq: 400, dur: 0.5, vol: 0.4, slide: 800 }
+};
+
+function playSound(name) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const s = SOUNDS[name];
+    if (!s) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = s.type;
+    osc.frequency.setValueAtTime(s.freq, audioCtx.currentTime);
+    if (s.slide !== 0) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(1, s.freq + s.slide), audioCtx.currentTime + s.dur);
+    }
+
+    gain.gain.setValueAtTime(s.vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + s.dur);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + s.dur);
+}
+
 /* INIT */
 function init() {
     // Bind Elements
@@ -115,6 +149,7 @@ window.useMove = function (moveType) {
             const earned = 10 + (GAME.level * 5);
             GAME.money += earned;
             createFloater(`+${earned} 💎`, '#ffd700');
+            playSound('coin'); // NEW SOUND
             break;
 
         case 'beg':
@@ -124,6 +159,7 @@ window.useMove = function (moveType) {
 
             GAME.isShielded = true; // Sets flag for enemy turn
             createFloater("SHIELD UP!", '#00ff00');
+            playSound('shield'); // NEW SOUND
             break;
 
         case 'pay':
@@ -143,6 +179,7 @@ window.useMove = function (moveType) {
         GAME.currentHP -= damage;
         animateHit(bossContainer, isCrit);
         createFloater(isCrit ? `CRIT ${damage}!` : `${damage}`, isCrit ? '#00ffff' : '#fff');
+        playSound('hit'); // NEW SOUND
 
         // Visuals
         const btn = document.querySelector(`#btn-${moveType}`);
@@ -180,6 +217,7 @@ function enemyAttack() {
     if (GAME.isShielded) {
         enemyDmg = Math.floor(enemyDmg / 4); // Reduces damage by 75%
         createFloater("BLOCKED!", "#00ff00", true);
+        playSound('shield'); // NEW SOUND
         GAME.isShielded = false; // Reset
     }
 
@@ -189,6 +227,7 @@ function enemyAttack() {
     // Visuals on Screen (Camera Shake + Red Flash)
     document.body.style.backgroundColor = '#550000';
     document.getElementById('game-ui').style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+    if (enemyDmg > 0) playSound('hit'); // NEW SOUND (Player Hit)
 
     setTimeout(() => {
         document.body.style.backgroundColor = 'var(--dark-bg)';
@@ -218,9 +257,11 @@ function enemyAttack() {
 function handleVictory() {
     GAME.level++;
     GAME.money += 50; // Earn currency
+    playSound('coin'); // NEW SOUND
 
     if (GAME.level % 50 === 0) {
         GAME.photosUnlocked++;
+        playSound('levelUp'); // NEW SOUND
         alert(`LVL ${GAME.level}! NEW PHOTO UNLOCKED!`);
     } else {
         createFloater("LEVEL UP!", "#ff00ff");
@@ -298,7 +339,7 @@ window.toggleGallery = function () {
 
 /* REWARD CONFIGURATION (User Edits This) */
 const REWARD_DATA = [
-    { level: 1, type: 'image', src: 'assets/boss_1.jpg' },
+    { level: 1, type: 'image', src: 'assets/reward_1.jpg' },
     { level: 50, type: 'video', src: 'assets/reward_2.mp4' }, // Example Video
     { level: 100, type: 'image', src: 'assets/reward_3.jpg' },
     // Add more here...
@@ -390,12 +431,14 @@ function updateBossUI() {
 
     // DYNAMIC BOSS IMAGE
     // Naming convention: boss_1.jpg, boss_2.jpg, etc.
-    // Uses modulo 10 to cycle through 10 boss images indefinitely
-    const bossIndex = (GAME.level % 10) || 10;
-    // bossImg.src = `assets/boss_${bossIndex}.jpg`; // UNCOMMENT THIS LINE WHEN FILES ARE READY
+    // Change image every 50 levels (1-50 = boss_1, 51-100 = boss_2, etc.)
+    const rawIndex = Math.ceil(GAME.level / 50);
+    const bossIndex = (rawIndex % 10) || 10;
+
+    bossImg.src = `assets/boss_${bossIndex}.jpg`;
 
     // For now, keep placeholder but log it
-    // console.log("Would load:", `assets/boss_${bossIndex}.jpg`);
+    console.log(`Level ${GAME.level}: Loading Boss ${bossIndex}`);
 
     updateUI();
 }
@@ -414,15 +457,40 @@ function renderStartGallery() {
     // Using same logic but for Start Screen
     for (let i = 1; i <= 10; i++) {
         const item = document.createElement('div');
+        item.className = 'gallery-item';
+
+        // Container for the image
+        const img = document.createElement('img');
+        img.src = `assets/boss_${i}.jpg`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+
         if (i <= GAME.photosUnlocked) {
-            item.className = 'gallery-item unlocked';
-            item.innerHTML = `<span style="font-size:1rem">PHOTO ${i}</span>`;
+            item.classList.add('unlocked');
+            // Clear image
+            img.style.filter = "none";
         } else {
             // BLURRED & GRAYSCALE EFFECT
-            item.className = 'gallery-item locked';
-            item.style.filter = "grayscale(1) blur(2px)";
-            item.innerHTML = `🔒`;
+            item.classList.add('locked');
+            img.style.filter = "grayscale(1) blur(15px) brightness(0.5)"; // Heavy blur for mystery
         }
+
+        item.appendChild(img);
+
+        // Lock Icon overlay for locked items
+        if (i > GAME.photosUnlocked) {
+            const lock = document.createElement('div');
+            lock.innerHTML = '🔒';
+            lock.style.position = 'absolute';
+            lock.style.top = '50%';
+            lock.style.left = '50%';
+            lock.style.transform = 'translate(-50%, -50%)';
+            lock.style.fontSize = '2rem';
+            lock.style.zIndex = '2';
+            item.appendChild(lock);
+        }
+
         grid.appendChild(item);
     }
 }
