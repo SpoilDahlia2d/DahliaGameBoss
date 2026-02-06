@@ -224,14 +224,16 @@ function enemyAttack() {
     GAME.playerHP -= enemyDmg;
     if (GAME.playerHP < 0) GAME.playerHP = 0;
 
-    // Visuals on Screen (Camera Shake + Red Flash)
-    document.body.style.backgroundColor = '#550000';
-    document.getElementById('game-ui').style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
-    if (enemyDmg > 0) playSound('hit'); // NEW SOUND (Player Hit)
+    // Visuals on Screen (Glitch + Red Flash)
+    document.body.style.backgroundColor = '#550000'; // Flash Red
+
+    if (enemyDmg > 0) {
+        playSound('hit');
+        triggerGlitch(); // NEW: Trigger CSS Glitch
+    }
 
     setTimeout(() => {
         document.body.style.backgroundColor = 'var(--dark-bg)';
-        document.getElementById('game-ui').style.transform = 'none';
     }, 100);
 
     createFloater(`-${enemyDmg} HP`, '#ff0000', true);
@@ -277,6 +279,17 @@ function handleVictory() {
 }
 
 /* VISUAL HELPERS */
+function triggerGlitch() {
+    const ui = document.getElementById('game-ui');
+    ui.classList.add('glitch-active');
+    ui.classList.add('shake-screen');
+
+    setTimeout(() => {
+        ui.classList.remove('glitch-active');
+        ui.classList.remove('shake-screen');
+    }, 300); // Effect duration
+}
+
 function spawnParticles(x, y) {
     for (let i = 0; i < 8; i++) {
         const p = document.createElement('div');
