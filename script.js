@@ -21,106 +21,58 @@ let bossContainer, bossImg, hpBarFill, hpTextCur, hpTextMax;
 let playerHPFill, playerHPCur, playerHPMax;
 let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGrid;
 
-/* AUDIO SYSTEM (Hybrid: Files + Synth Fallback) */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const SOUNDS_CONFIG = {
-    hit: { file: 'assets/hit.mp3', synth: { type: 'sawtooth', freq: 100, dur: 0.1, vol: 0.5, slide: -50 } },
-    coin: { file: 'assets/coin.mp3', synth: { type: 'sine', freq: 1200, dur: 0.3, vol: 0.3, slide: 0 } },
-    shield: { file: 'assets/shield.mp3', synth: { type: 'square', freq: 200, dur: 0.4, vol: 0.2, slide: -100 } },
-    levelUp: { file: 'assets/levelup.mp3', synth: { type: 'sine', freq: 400, dur: 0.5, vol: 0.4, slide: 800 } },
-    welcome: { file: 'assets/welcome.mp3', synth: { type: 'sine', freq: 600, dur: 1.0, vol: 0.3, slide: -200 } },
-    bgm: { file: 'assets/bgm.mp3', synth: null } // Background Music
-};
-
+/* AUDIO SYSTEM (Simple HTML5 Audio for Local Compatibility) */
 const audioCache = {};
 
 function playSound(name) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    // Try to play file if loaded
-    if (audioCache[name]) {
-        const source = audioCtx.createBufferSource();
-        source.buffer = audioCache[name];
-        source.connect(audioCtx.destination);
-        source.start(0);
-        return;
+    // SFX
+    if (name === 'hit' || name === 'coin' || name === 'shield' || name === 'levelUp' || name === 'welcome') {
+        const audio = new Audio(`assets/${name}.mp3`);
+        audio.volume = 0.5;
+        audio.play().catch(e => console.warn(`Sound ${name} blocked`, e));
     }
-
-    // Fallback to Synth
-    playSynth(name);
 }
 
 function playMusic() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    // Check if BGM file exists
-    if (audioCache['bgm']) {
-        const source = audioCtx.createBufferSource();
-        source.buffer = audioCache['bgm'];
-        source.loop = true;
-        source.connect(audioCtx.destination);
-        source.start(0);
-        console.log("Playing BGM (File)");
-    } else {
-        console.log("BGM not loaded yet. Retrying in 3s...");
-        setTimeout(() => {
-            if (audioCache['bgm']) playMusic();
-            else {
-                // Fallback only after timeout
-                console.log("Using Synth BGM Fallback");
-                // Simple Synth Drone
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(50, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-            }
-        }, 3000);
-    }
-}
-
-function playSynth(name) {
-    const s = SOUNDS_CONFIG[name].synth;
-    if (!s) return;
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = s.type;
-    osc.frequency.setValueAtTime(s.freq, audioCtx.currentTime);
-    if (s.slide !== 0) {
-        osc.frequency.exponentialRampToValueAtTime(Math.max(1, s.freq + s.slide), audioCtx.currentTime + s.dur);
-    }
-
-    gain.gain.setValueAtTime(s.vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + s.dur);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + s.dur);
+    console.log("Attempting to play music...");
+    const bgm = new Audio('assets/bgm.mp3');
+    bgm.loop = true;
+    bgm.volume = 0.3;
+    bgm.play().then(() => {
+        console.log("Music Playing!");
+        window.bgmInstance = bgm; // Save ref
+    }).catch(e => {
+        console.warn("Music Auto-play blocked (User interaction needed)", e);
+        // Retry on next click
+        document.addEventListener('click', () => {
+            bgm.play();
+            window.bgmInstance = bgm;
+        }, { once: true });
+    });
 }
 
 function preloadAudio() {
-    Object.keys(SOUNDS_CONFIG).forEach(key => {
-        const url = SOUNDS_CONFIG[key].file;
-        fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error("No file");
-                return response.arrayBuffer();
-            })
-            .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
-            .then(audioBuffer => {
-                audioCache[key] = audioBuffer;
-                console.log(`Audio Loaded: ${key}`);
-            })
-            .catch(() => console.log(`Using Synth for: ${key}`));
-    });
+    // Not needed for HTML5 Audio object approach
+    console.log("Audio System Ready (HTML5 Mode)");
 }
+
+/* ERROR HANDLER */
+window.onerror = function (msg, url, line) {
+    const errBox = document.getElementById('debug-box') || document.createElement('div');
+    errBox.id = 'debug-box';
+    errBox.style.position = 'fixed';
+    errBox.style.bottom = '0';
+    errBox.style.left = '0';
+    errBox.style.width = '100%';
+    errBox.style.background = 'rgba(255,0,0,0.8)';
+    errBox.style.color = 'white';
+    errBox.style.fontSize = '12px';
+    errBox.style.padding = '5px';
+    errBox.style.zIndex = '99999';
+    errBox.innerText = `ERR: ${msg} (Line ${line})`;
+    document.body.appendChild(errBox);
+    return false;
+};
 
 /* INIT */
 function init() {
@@ -674,11 +626,4 @@ window.startGame = function () {
 window.onload = function () {
     init();
     renderStartGallery();
-
-    // Add interaction listener to unlock AudioContext
-    document.addEventListener('click', function () {
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-    }, { once: true });
 };
