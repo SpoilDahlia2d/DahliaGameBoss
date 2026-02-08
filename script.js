@@ -22,14 +22,22 @@ let playerHPFill, playerHPCur, playerHPMax;
 let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGrid;
 
 /* AUDIO SYSTEM (Simple HTML5 Audio for Local Compatibility) */
-const audioCache = {};
+const audioLibrary = {
+    hit: new Audio('assets/hit.mp3'),
+    coin: new Audio('assets/coin.mp3'),
+    shield: new Audio('assets/shield.mp3'),
+    levelUp: new Audio('assets/levelup.mp3'),
+    welcome: new Audio('assets/welcome.mp3')
+};
+
+// Pre-set volumes
+Object.values(audioLibrary).forEach(a => a.volume = 0.6);
 
 function playSound(name) {
-    // SFX
-    if (name === 'hit' || name === 'coin' || name === 'shield' || name === 'levelUp' || name === 'welcome') {
-        const audio = new Audio(`assets/${name}.mp3`);
-        audio.volume = 0.5;
-        audio.play().catch(e => console.warn(`Sound ${name} blocked`, e));
+    const sound = audioLibrary[name];
+    if (sound) {
+        sound.currentTime = 0; // Reset to start
+        sound.play().catch(e => console.warn(`Sound ${name} blocked`, e));
     }
 }
 
@@ -458,17 +466,21 @@ function updateBossUI() {
     const video = document.getElementById('boss-video');
     const img = document.getElementById('boss-img');
 
+    // Safety check for elements
+    if (!img) { console.error("ERR: boss-img element missing!"); return; }
+
+    const targetImgPath = `assets/boss_${bossIndex}.jpg`;
+
     if (isRare && video) {
         // RARE VIDEO HANDLING
         const vidPath = `assets/boss_${bossIndex}_rare.mp4`;
 
-        // Force reset
         video.classList.remove('hidden');
-        if (img) img.classList.add('hidden');
+        img.classList.add('hidden');
 
         video.src = vidPath;
-        video.muted = true; // CRITICAL FOR SAFARI
-        video.playsInline = true; // CRITICAL FOR IPHONE
+        video.muted = true;
+        video.playsInline = true;
         video.loop = true;
 
         video.onloadeddata = () => {
@@ -477,25 +489,29 @@ function updateBossUI() {
         };
 
         video.onerror = (e) => {
-            console.error("Video Failed:", vidPath, e);
+            console.error("Video Failed:", vidPath);
             // Fallback to Image
             video.classList.add('hidden');
-            if (img) {
-                img.classList.remove('hidden');
-                img.src = `assets/boss_${bossIndex}.jpg`;
-            }
+            img.classList.remove('hidden');
+            img.src = targetImgPath;
         };
     } else {
         // STANDARD IMAGE HANDLING
         if (video) {
             video.pause();
             video.classList.add('hidden');
-            video.src = ""; // Stop buffering
         }
-        if (img) {
-            img.classList.remove('hidden');
-            img.src = `assets/boss_${bossIndex}.jpg`;
-        }
+
+        img.classList.remove('hidden');
+        img.src = targetImgPath;
+
+        // Debug Loading
+        img.onload = () => console.log(`Image Loaded: ${targetImgPath}`);
+        img.onerror = () => {
+            console.error(`Image Failed: ${targetImgPath}`);
+            alert(`MISSING FILE: ${targetImgPath}`); // Alert user directly
+            img.alt = "IMAGE NOT FOUND";
+        };
     }
 
     console.log(`Level ${GAME.level}: Loading Boss ${bossIndex} (Rare? ${isRare})`);
@@ -627,3 +643,4 @@ window.onload = function () {
     init();
     renderStartGallery();
 };
+
