@@ -425,19 +425,180 @@ window.closeModals = function () {
     document.getElementById('punishment-modal').classList.add('hidden'); // Added this
 }
 
-/* START GAME LOGIC */
-window.startGame = function () {
-    console.log("Starting Game...");
+/* UI UPDATES */
+function updateUI() {
+    // Boss HP
+    const pct = Math.max(0, (GAME.currentHP / GAME.maxHP) * 100);
+    if (hpBarFill) {
+        hpBarFill.style.width = pct + '%';
+        hpTextCur.innerText = Math.ceil(Math.max(0, GAME.currentHP));
+    }
+
+    // Player HP
+    if (playerHPFill) {
+        const pPct = Math.max(0, (GAME.playerHP / GAME.playerMaxHP) * 100);
+        playerHPFill.style.width = pPct + '%';
+        playerHPCur.innerText = Math.ceil(Math.max(0, GAME.playerHP));
+        if (playerHPMax) playerHPMax.innerText = GAME.playerMaxHP;
+    }
+
+    // Energy
+    const enPct = Math.max(0, (GAME.energy / GAME.maxEnergy) * 100);
+    if (energyBarFill) energyBarFill.style.width = enPct + '%';
+
+    if (currDisplay) currDisplay.innerText = GAME.money;
+
+    renderMiniGallery(); // Update Homepage Gallery
+}
+
+function updateBossUI() {
+    if (lvlDisplay) lvlDisplay.innerText = GAME.level;
+    if (hpTextMax) hpTextMax.innerText = GAME.maxHP;
+    const nameEl = document.getElementById('boss-name');
+    if (nameEl) nameEl.innerText = GAME.bossData.name;
 
     // DYNAMIC BOSS IMAGE / VIDEO
     const rawIndex = Math.ceil(GAME.level / 50);
     const bossIndex = (rawIndex % 10) || 10;
 
     // RARE EVENT: EVERY 10 LEVELS (10, 20, 30...)
-    // This allows you to show a special video periodically.
     const isRare = (GAME.level % 10 === 0);
 
     const video = document.getElementById('boss-video');
+    const img = document.getElementById('boss-img');
+
+    if (isRare && video) {
+        // Try to load video
+        const vidPath = `assets/boss_${bossIndex}_rare.mp4`;
+        video.src = vidPath;
+        video.onloadeddata = () => {
+            video.classList.remove('hidden');
+            if (img) img.classList.add('hidden');
+            video.play().catch(e => console.log("Auto-play blocked"));
+        };
+        video.onerror = () => {
+            // Fallback to Image
+            video.classList.add('hidden');
+            if (img) {
+                img.classList.remove('hidden');
+                img.src = `assets/boss_${bossIndex}.jpg`;
+            }
+        };
+    } else {
+        // Standard Image
+        if (video) video.classList.add('hidden');
+        if (img) {
+            img.classList.remove('hidden');
+            img.src = `assets/boss_${bossIndex}.jpg`;
+        }
+    }
+
+    console.log(`Level ${GAME.level}: Loading Boss ${bossIndex} (Rare? ${isRare})`);
+
+    updateUI();
+}
+
+function renderMiniGallery() {
+    const bar = document.getElementById('mini-gallery');
+    if (!bar) return;
+    bar.innerHTML = "";
+
+    for (let i = 1; i <= 10; i++) {
+        const slot = document.createElement('div');
+        slot.className = i <= GAME.photosUnlocked ? 'mini-slot unlocked' : 'mini-slot';
+        bar.appendChild(slot);
+    }
+}
+
+function renderGallery() {
+    const grid = document.getElementById('gallery-grid');
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    for (let i = 1; i <= 10; i++) {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+
+        const img = document.createElement('img');
+        img.src = `assets/reward_${i}.jpg`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+
+        img.onerror = function () {
+            if (this.src.includes('reward')) {
+                this.src = `assets/boss_${i}.jpg`;
+            } else if (!this.src.includes('boss_1.jpg')) {
+                this.src = 'assets/boss_1.jpg';
+            }
+        };
+
+        if (i <= GAME.photosUnlocked) {
+            item.className = 'gallery-item unlocked';
+            img.style.filter = "none";
+        } else {
+            item.className = 'gallery-item locked';
+            img.style.filter = "grayscale(1) blur(15px) brightness(0.5)";
+            item.innerHTML = `🔒<br><span style="font-size:0.5rem">LVL ${i * 50}</span>`;
+        }
+
+        if (i <= GAME.photosUnlocked) item.appendChild(img);
+        grid.appendChild(item);
+    }
+}
+
+function renderStartGallery() {
+    const grid = document.getElementById('start-gallery-grid');
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    for (let i = 1; i <= 10; i++) {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+
+        const img = document.createElement('img');
+        img.src = `assets/reward_${i}.jpg`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+
+        img.onerror = function () {
+            if (this.src.includes('reward')) {
+                this.src = `assets/boss_${i}.jpg`;
+            } else if (!this.src.includes('boss_1.jpg')) {
+                this.src = 'assets/boss_1.jpg';
+            }
+        };
+
+        if (i <= GAME.photosUnlocked) {
+            item.classList.add('unlocked');
+            img.style.filter = "none";
+        } else {
+            item.classList.add('locked');
+            img.style.filter = "grayscale(1) blur(15px) brightness(0.5)";
+        }
+
+        item.appendChild(img);
+
+        if (i > GAME.photosUnlocked) {
+            const lock = document.createElement('div');
+            lock.innerHTML = '🔒';
+            lock.style.position = 'absolute';
+            lock.style.top = '50%';
+            lock.style.left = '50%';
+            lock.style.transform = 'translate(-50%, -50%)';
+            lock.style.fontSize = '2rem';
+            lock.style.zIndex = '2';
+            item.appendChild(lock);
+        }
+
+        grid.appendChild(item);
+    }
+}
+
+/* START GAME LOGIC */
+window.startGame = function () {
+    console.log("Starting Game...");
 
     // UI Toggle
     const start = document.getElementById('start-screen');
