@@ -62,16 +62,23 @@ function playMusic() {
         source.start(0);
         console.log("Playing BGM (File)");
     } else {
-        // Simple Synth Drone for BGM
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(50, audioCtx.currentTime); // Deep drone
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        console.log("Playing BGM (Synth)");
+        console.log("BGM not loaded yet. Retrying in 3s...");
+        setTimeout(() => {
+            if (audioCache['bgm']) playMusic();
+            else {
+                // Fallback only after timeout
+                console.log("Using Synth BGM Fallback");
+                // Simple Synth Drone
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(50, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+            }
+        }, 3000);
     }
 }
 
@@ -500,15 +507,25 @@ function updateBossUI() {
     const img = document.getElementById('boss-img');
 
     if (isRare && video) {
-        // Try to load video
+        // RARE VIDEO HANDLING
         const vidPath = `assets/boss_${bossIndex}_rare.mp4`;
+
+        // Force reset
+        video.classList.remove('hidden');
+        if (img) img.classList.add('hidden');
+
         video.src = vidPath;
+        video.muted = true; // CRITICAL FOR SAFARI
+        video.playsInline = true; // CRITICAL FOR IPHONE
+        video.loop = true;
+
         video.onloadeddata = () => {
-            video.classList.remove('hidden');
-            if (img) img.classList.add('hidden');
-            video.play().catch(e => console.log("Auto-play blocked"));
+            console.log("Video Loaded");
+            video.play().catch(e => console.warn("Auto-play blocked", e));
         };
-        video.onerror = () => {
+
+        video.onerror = (e) => {
+            console.error("Video Failed:", vidPath, e);
             // Fallback to Image
             video.classList.add('hidden');
             if (img) {
@@ -517,8 +534,12 @@ function updateBossUI() {
             }
         };
     } else {
-        // Standard Image
-        if (video) video.classList.add('hidden');
+        // STANDARD IMAGE HANDLING
+        if (video) {
+            video.pause();
+            video.classList.add('hidden');
+            video.src = ""; // Stop buffering
+        }
         if (img) {
             img.classList.remove('hidden');
             img.src = `assets/boss_${bossIndex}.jpg`;
@@ -527,7 +548,9 @@ function updateBossUI() {
 
     console.log(`Level ${GAME.level}: Loading Boss ${bossIndex} (Rare? ${isRare})`);
 
-    updateUI();
+    try {
+        updateUI();
+    } catch (e) { console.error("UI Update Failed", e); }
 }
 
 function renderMiniGallery() {
