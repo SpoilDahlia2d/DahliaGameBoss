@@ -429,6 +429,16 @@ window.closeModals = function () {
 window.startGame = function () {
     console.log("Starting Game...");
 
+    // DYNAMIC BOSS IMAGE / VIDEO
+    const rawIndex = Math.ceil(GAME.level / 50);
+    const bossIndex = (rawIndex % 10) || 10;
+
+    // RARE EVENT: EVERY 10 LEVELS (10, 20, 30...)
+    // This allows you to show a special video periodically.
+    const isRare = (GAME.level % 10 === 0);
+
+    const video = document.getElementById('boss-video');
+
     // UI Toggle
     const start = document.getElementById('start-screen');
     const game = document.getElementById('game-ui');
