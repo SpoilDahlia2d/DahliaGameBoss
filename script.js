@@ -28,7 +28,8 @@ const SOUNDS_CONFIG = {
     coin: { file: 'assets/coin.mp3', synth: { type: 'sine', freq: 1200, dur: 0.3, vol: 0.3, slide: 0 } },
     shield: { file: 'assets/shield.mp3', synth: { type: 'square', freq: 200, dur: 0.4, vol: 0.2, slide: -100 } },
     levelUp: { file: 'assets/levelup.mp3', synth: { type: 'sine', freq: 400, dur: 0.5, vol: 0.4, slide: 800 } },
-    welcome: { file: 'assets/welcome.mp3', synth: { type: 'sine', freq: 600, dur: 1.0, vol: 0.3, slide: -200 } } // New Welcome Sound
+    welcome: { file: 'assets/welcome.mp3', synth: { type: 'sine', freq: 600, dur: 1.0, vol: 0.3, slide: -200 } },
+    bgm: { file: 'assets/bgm.mp3', synth: null } // Background Music
 };
 
 const audioCache = {};
@@ -47,6 +48,31 @@ function playSound(name) {
 
     // Fallback to Synth
     playSynth(name);
+}
+
+function playMusic() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    // Check if BGM file exists
+    if (audioCache['bgm']) {
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioCache['bgm'];
+        source.loop = true;
+        source.connect(audioCtx.destination);
+        source.start(0);
+        console.log("Playing BGM (File)");
+    } else {
+        // Simple Synth Drone for BGM
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(50, audioCtx.currentTime); // Deep drone
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        console.log("Playing BGM (Synth)");
+    }
 }
 
 function playSynth(name) {
@@ -218,13 +244,19 @@ window.useMove = function (moveType) {
             break;
 
         case 'beg':
-            // MECHANIC CHANGE: SHIELD / DEFENSE
-            cost = 15;
-            if (GAME.energy < cost) { alert("LOW ENERGY"); return; }
+            // MECHANIC CHANGE: SPEND DIAMONDS FOR SHIELD
+            cost = 0; // Energy free
+            const moneyCost = 50; // Diamond Cost
 
+            if (GAME.money < moneyCost) {
+                alert(`NEED ${moneyCost} DIAMONDS! WORSHIP MORE!`);
+                return;
+            }
+
+            GAME.money -= moneyCost;
             GAME.isShielded = true; // Sets flag for enemy turn
-            createFloater("SHIELD UP!", '#00ff00');
-            playSound('shield'); // NEW SOUND
+            createFloater("SHIELD BOUGHT -50💎", '#00ff00');
+            playSound('shield');
             break;
 
         case 'pay':
