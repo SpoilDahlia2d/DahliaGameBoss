@@ -415,221 +415,34 @@ window.toggleGallery = function () {
     renderGallery();
 }
 
-/* REWARD CONFIGURATION (User Edits This) */
-const REWARD_DATA = [
-    { level: 1, type: 'image', src: 'assets/reward_1.jpg' },
-    { level: 50, type: 'video', src: 'assets/reward_2.mp4' }, // Example Video
-    { level: 100, type: 'image', src: 'assets/reward_3.jpg' },
-    // Add more here...
-];
-
-function renderGallery() {
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "";
-
-    const TOTAL_SLOTS = 10;
-
-    for (let i = 1; i <= TOTAL_SLOTS; i++) {
-        const item = document.createElement('div');
-
-        // Find specific reward for this slot (mapped 1-10 to levels 50-500 usually, but simplified here)
-        // For now, let's say Slot 1 = Reward 1, etc.
-        const reward = REWARD_DATA[i - 1] || { type: 'image', src: `assets/reward_${i}.jpg` };
-
-        if (i <= GAME.photosUnlocked) {
-            // UNLOCKED
-            item.className = 'gallery-item unlocked';
-
-            if (reward.type === 'video') {
-                item.innerHTML = `
-                    <video src="${reward.src}" controls style="width:100%; height:100%; object-fit:cover;"></video>
-                    <span style="font-size:0.8rem; position:absolute; bottom:5px; left:5px; background:#000;">VIDEO ${i}</span>
-                `;
-            } else {
-                item.innerHTML = `
-                    <img src="${reward.src}" style="width:100%; height:100%; object-fit:cover;">
-                    <span style="font-size:0.8rem; position:absolute; bottom:5px; left:5px; background:#000;">PHOTO ${i}</span>
-                `;
-            }
-
-            // Zoom click
-            item.onclick = (e) => {
-                if (e.target.tagName !== 'VIDEO') alert(`Viewing Reward ${i}`);
-            };
-        } else {
-            // LOCKED
-            item.className = 'gallery-item locked';
-            item.innerHTML = `🔒<br><span style="font-size:0.5rem">LVL ${i * 50}</span>`;
-        }
-        grid.appendChild(item);
-    }
-}
-
-function renderMiniGallery() {
-    const bar = document.getElementById('mini-gallery');
-    if (!bar) return;
-    bar.innerHTML = "";
-
-    for (let i = 1; i <= 10; i++) {
-        const slot = document.createElement('div');
-        slot.className = i <= GAME.photosUnlocked ? 'mini-slot unlocked' : 'mini-slot';
-        bar.appendChild(slot);
-    }
-}
-
-/* UI UPDATES */
-function updateUI() {
-    // Boss HP
-    const pct = Math.max(0, (GAME.currentHP / GAME.maxHP) * 100);
-    hpBarFill.style.width = pct + '%';
-    hpTextCur.innerText = Math.ceil(Math.max(0, GAME.currentHP));
-
-    // Player HP
-    // Check if element exists to avoid crash
-    if (playerHPFill) {
-        const pPct = Math.max(0, (GAME.playerHP / GAME.playerMaxHP) * 100);
-        playerHPFill.style.width = pPct + '%';
-        playerHPCur.innerText = Math.ceil(Math.max(0, GAME.playerHP));
-        playerHPMax.innerText = GAME.playerMaxHP;
-    }
-
-    // Energy
-    const enPct = Math.max(0, (GAME.energy / GAME.maxEnergy) * 100);
-    energyBarFill.style.width = enPct + '%';
-
-    currDisplay.innerText = GAME.money;
-
-    renderMiniGallery(); // Update Homepage Gallery
-}
-
-function updateBossUI() {
-    lvlDisplay.innerText = GAME.level;
-    hpTextMax.innerText = GAME.maxHP;
-    document.getElementById('boss-name').innerText = GAME.bossData.name;
-
-    // DYNAMIC BOSS IMAGE
-    // Naming convention: boss_1.jpg, boss_2.jpg, etc.
-    // Change image every 50 levels (1-50 = boss_1, 51-100 = boss_2, etc.)
-    const rawIndex = Math.ceil(GAME.level / 50);
-    const bossIndex = (rawIndex % 10) || 10;
-
-    bossImg.src = `assets/boss_${bossIndex}.jpg`;
-
-    // For now, keep placeholder but log it
-    console.log(`Level ${GAME.level}: Loading Boss ${bossIndex}`);
-
-    updateUI();
-}
-
-/* START GAME LOGIC */
-window.startGame = function () {
-    document.getElementById('start-screen').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-
-    // Play Welcome Voice (Once)
-    playSound('welcome');
-
-    // Start BGM (Loop)
-    playMusic();
-}
-
-function playMusic() {
-    const bgmPath = 'assets/bgm.mp3';
-    // Check if we already have it in cache or just load it
-    // For BGM, we use an Audio element for easier looping handling
-    if (!window.bgmAudio) {
-        window.bgmAudio = new Audio(bgmPath);
-        window.bgmAudio.loop = true;
-        window.bgmAudio.volume = 0.4;
-
-        // Failsafe: if file missing, it just won't play (silent fail)
-        window.bgmAudio.play().catch(e => console.log("BGM not found or blocked: " + e));
-    } else {
-        window.bgmAudio.play();
-    }
-}
-
-function renderStartGallery() {
-    const grid = document.getElementById('start-gallery-grid');
-    if (!grid) return;
-    grid.innerHTML = "";
-
-    // Using same logic but for Start Screen
-    for (let i = 1; i <= 10; i++) {
-        const item = document.createElement('div');
-        item.className = 'gallery-item';
-
-        // Container for the image
-        // CHANGE: Try reward image first
-        const img = document.createElement('img');
-        img.src = `assets/reward_${i}.jpg`;
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-
-        // FAILSAFE: If reward_X missing -> boss_X -> boss_1
-        img.onerror = function () {
-            // If checking reward failed, try boss
-            if (this.src.includes('reward')) {
-                this.src = `assets/boss_${i}.jpg`;
-            } else if (!this.src.includes('boss_1.jpg')) {
-                // If boss also missing, fallback to safe boss_1
-                this.src = 'assets/boss_1.jpg';
-            }
-        };
-
-        if (i <= GAME.photosUnlocked) {
-            item.classList.add('unlocked');
-            // Clear image
-            img.style.filter = "none";
-        } else {
-            // BLURRED & GRAYSCALE EFFECT
-            item.classList.add('locked');
-            img.style.filter = "grayscale(1) blur(15px) brightness(0.5)"; // Heavy blur for mystery
-        }
-
-        item.appendChild(img);
-
-        // Lock Icon overlay for locked items
-        if (i > GAME.photosUnlocked) {
-            const lock = document.createElement('div');
-            lock.innerHTML = '🔒';
-            lock.style.position = 'absolute';
-            lock.style.top = '50%';
-            lock.style.left = '50%';
-            lock.style.transform = 'translate(-50%, -50%)';
-            lock.style.fontSize = '2rem';
-            lock.style.zIndex = '2';
-            item.appendChild(lock);
-        }
-
-        grid.appendChild(item);
-    }
-}
-
-/* REDEMPTION LOGIC */
-window.redeemCode = function () {
-    const input = document.getElementById('throne-code-input');
-    const code = input.value.toUpperCase().trim();
-    const validCodes = ["HEALME", "QUEEN", "DAHLIA", "PIGGY", "THANKYOU"];
-
-    if (validCodes.includes(code)) {
-        GAME.playerHP = GAME.playerMaxHP; // Full Heal
-        GAME.money += 500; // Bonus Money
-
-        alert("OFFERING ACCEPTED. LIFE RESTORED.");
-        closeModals();
-        updateUI();
-        saveGame();
-        input.value = ""; // Clear input
-    } else {
-        alert("INVALID CODE. PAY FIRST.");
-    }
-}
+/* REWARD CONFIGURATION */
+// Simplified to just images based on user request
+const REWARD_DATA = [];
 
 window.closeModals = function () {
     document.getElementById('gallery-modal').classList.add('hidden');
     document.getElementById('throne-modal').classList.add('hidden');
+    document.getElementById('punishment-modal').classList.add('hidden'); // Added this
+}
+
+/* START GAME LOGIC */
+window.startGame = function () {
+    console.log("Starting Game...");
+
+    // UI Toggle
+    const start = document.getElementById('start-screen');
+    const game = document.getElementById('game-ui');
+
+    if (start) start.classList.add('hidden');
+    if (game) game.classList.remove('hidden');
+
+    // Audio - Wrapped in Try/Catch so it doesn't block game start
+    try {
+        playSound('welcome');
+        playMusic();
+    } catch (e) {
+        console.warn("Audio failed to start:", e);
+    }
 }
 
 window.onload = function () {
