@@ -23,50 +23,23 @@ let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGri
 
 /* AUDIO SYSTEM (Simple HTML5 Audio for Local Compatibility) */
 const audioLibrary = {
-    hit: new Audio('assets/hit.mp3'),
-    coin: new Audio('assets/coin.mp3'),
-    shield: new Audio('assets/shield.mp3'),
-    levelUp: new Audio('assets/levelup.mp3'),
-    welcome: new Audio('assets/welcome.mp3')
+    hit: 'assets/hit.mp3',
+    coin: 'assets/coin.mp3',
+    shield: 'assets/shield.mp3',
+    levelUp: 'assets/levelup.mp3',
+    welcome: 'assets/welcome.mp3'
 };
 
-// ON-SCREEN DEBUGGER
-const dbg = document.createElement('div');
-dbg.style.position = 'fixed';
-dbg.style.top = '10px';
-dbg.style.left = '10px';
-dbg.style.background = 'rgba(0,0,0,0.9)';
-dbg.style.color = '#00ff00';
-dbg.style.fontSize = '14px';
-dbg.style.padding = '10px';
-dbg.style.zIndex = '999999';
-dbg.style.pointerEvents = 'none';
-dbg.style.border = '2px solid red';
-dbg.id = 'screen-debug';
-dbg.innerText = 'DEBUG LOG ACTIVE...';
-document.body.appendChild(dbg);
-
-function logToScreen(msg) {
-    const line = document.createElement('div');
-    line.innerText = msg;
-    line.style.borderBottom = '1px solid #333';
-    dbg.appendChild(line);
-    console.log(msg);
-    // Keep last 10 lines
-    while (dbg.children.length > 10) dbg.removeChild(dbg.firstChild);
-}
-
-// Pre-set volumes
-Object.values(audioLibrary).forEach(a => {
-    a.volume = 0.6;
-    a.onerror = (e) => logToScreen(`Audio Fail: ${e.target.src}`);
-});
-
 function playSound(name) {
-    const sound = audioLibrary[name];
-    if (sound) {
-        sound.currentTime = 0; // Reset to start
-        sound.play().catch(e => logToScreen(`Snd Block: ${name}`));
+    const src = audioLibrary[name];
+    if (src) {
+        // CLONE for overlapping sounds (polyphony)
+        const sfx = new Audio(src);
+        sfx.volume = 0.6;
+        sfx.play().catch(e => logToScreen(`Snd Block: ${name}`));
+
+        // Cleanup
+        sfx.onended = () => sfx.remove();
     }
 }
 
