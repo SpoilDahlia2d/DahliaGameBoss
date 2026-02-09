@@ -113,6 +113,10 @@ body {
     background: #000;
     overflow: hidden;
     transition: transform 0.1s;
+    display: flex;
+    /* Ensure centering */
+    align-items: center;
+    justify-content: center;
 }
 
 #boss-img {
@@ -464,6 +468,11 @@ body {
 }
 
 /* MODALS */
+.hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 .modal {
     position: fixed;
     top: 0;
