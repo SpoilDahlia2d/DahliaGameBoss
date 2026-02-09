@@ -30,14 +30,43 @@ const audioLibrary = {
     welcome: new Audio('assets/welcome.mp3')
 };
 
+// ON-SCREEN DEBUGGER
+const dbg = document.createElement('div');
+dbg.style.position = 'fixed';
+dbg.style.top = '10px';
+dbg.style.left = '10px';
+dbg.style.background = 'rgba(0,0,0,0.9)';
+dbg.style.color = '#00ff00';
+dbg.style.fontSize = '14px';
+dbg.style.padding = '10px';
+dbg.style.zIndex = '999999';
+dbg.style.pointerEvents = 'none';
+dbg.style.border = '2px solid red';
+dbg.id = 'screen-debug';
+dbg.innerText = 'DEBUG LOG ACTIVE...';
+document.body.appendChild(dbg);
+
+function logToScreen(msg) {
+    const line = document.createElement('div');
+    line.innerText = msg;
+    line.style.borderBottom = '1px solid #333';
+    dbg.appendChild(line);
+    console.log(msg);
+    // Keep last 10 lines
+    while (dbg.children.length > 10) dbg.removeChild(dbg.firstChild);
+}
+
 // Pre-set volumes
-Object.values(audioLibrary).forEach(a => a.volume = 0.6);
+Object.values(audioLibrary).forEach(a => {
+    a.volume = 0.6;
+    a.onerror = (e) => logToScreen(`Audio Fail: ${e.target.src}`);
+});
 
 function playSound(name) {
     const sound = audioLibrary[name];
     if (sound) {
         sound.currentTime = 0; // Reset to start
-        sound.play().catch(e => console.warn(`Sound ${name} blocked`, e));
+        sound.play().catch(e => logToScreen(`Snd Block: ${name}`));
     }
 }
 
@@ -484,12 +513,12 @@ function updateBossUI() {
         video.loop = true;
 
         video.onloadeddata = () => {
-            console.log("Video Loaded");
-            video.play().catch(e => console.warn("Auto-play blocked", e));
+            logToScreen("Vid Loaded");
+            video.play().catch(e => logToScreen("Auto-play blocked"));
         };
 
         video.onerror = (e) => {
-            console.error("Video Failed:", vidPath);
+            logToScreen(`Vid Fail: ${vidPath}`);
             // Fallback to Image
             video.classList.add('hidden');
             img.classList.remove('hidden');
@@ -506,15 +535,14 @@ function updateBossUI() {
         img.src = targetImgPath;
 
         // Debug Loading
-        img.onload = () => console.log(`Image Loaded: ${targetImgPath}`);
+        img.onload = () => logToScreen(`Img Loaded: ${targetImgPath}`);
         img.onerror = () => {
-            console.error(`Image Failed: ${targetImgPath}`);
-            alert(`MISSING FILE: ${targetImgPath}`); // Alert user directly
-            img.alt = "IMAGE NOT FOUND";
+            logToScreen(`Img Fail: ${targetImgPath}`);
+            img.alt = "MISSING: " + targetImgPath;
         };
     }
 
-    console.log(`Level ${GAME.level}: Loading Boss ${bossIndex} (Rare? ${isRare})`);
+    logToScreen(`Lvl ${GAME.level} Boss ${bossIndex}`);
 
     try {
         updateUI();
@@ -643,4 +671,3 @@ window.onload = function () {
     init();
     renderStartGallery();
 };
-
