@@ -21,7 +21,7 @@ let bossContainer, bossImg, hpBarFill, hpTextCur, hpTextMax;
 let playerHPFill, playerHPCur, playerHPMax;
 let lvlDisplay, currDisplay, energyBarFill, particleLayer, floaterLayer, moveGrid;
 
-/* AUDIO SYSTEM (Simple HTML5 Audio for Local Compatibility) */
+/* AUDIO SYSTEM (Hybrid: File -> Synth Fallback) */
 const audioLibrary = {
     hit: 'assets/hit.mp3',
     coin: 'assets/coin.mp3',
@@ -30,16 +30,84 @@ const audioLibrary = {
     welcome: 'assets/welcome.mp3'
 };
 
+// Simple Synth Context
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
 function playSound(name) {
     const src = audioLibrary[name];
-    if (src) {
-        // CLONE for overlapping sounds (polyphony)
-        const sfx = new Audio(src);
-        sfx.volume = 0.6;
-        sfx.play().catch(e => console.warn(`Snd Block: ${name}`));
+    if (!src) return;
 
-        // Cleanup
-        sfx.onended = () => sfx.remove();
+    const sfx = new Audio(src);
+    sfx.volume = 0.6;
+
+    // Attempt play
+    const playPromise = sfx.play();
+
+    if (playPromise !== undefined) {
+        playPromise.catch(e => {
+            console.warn(`File blocked/missing: ${name}. Using Synth.`);
+            playSynth(name);
+        });
+    }
+
+    // Also catch loading errors (404)
+    sfx.onerror = () => {
+        console.warn(`File not found: ${name}. Using Synth.`);
+        playSynth(name);
+    };
+
+    sfx.onended = () => sfx.remove();
+}
+
+function playSynth(name) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    const now = audioCtx.currentTime;
+
+    switch (name) {
+        case 'hit': // High pitch impact
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+            break;
+
+        case 'coin': // High ping
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1200, now);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+
+        case 'shield': // Low square wave
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(200, now);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            break;
+
+        case 'levelUp': // Power up slide
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(600, now + 0.5);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+            break;
     }
 }
 
