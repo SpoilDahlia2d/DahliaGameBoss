@@ -207,7 +207,6 @@ body {
 
 #hp-bar-fill {
     height: 100%;
-    /* BOSS HP RED */
     background: linear-gradient(90deg, #ff0000, #ff5555);
     box-shadow: 0 0 15px #ff0000;
     transition: width 0.1s linear;
