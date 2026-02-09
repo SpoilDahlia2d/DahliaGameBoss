@@ -36,7 +36,7 @@ function playSound(name) {
         // CLONE for overlapping sounds (polyphony)
         const sfx = new Audio(src);
         sfx.volume = 0.6;
-        sfx.play().catch(e => logToScreen(`Snd Block: ${name}`));
+        sfx.play().catch(e => console.warn(`Snd Block: ${name}`));
 
         // Cleanup
         sfx.onended = () => sfx.remove();
@@ -486,12 +486,12 @@ function updateBossUI() {
         video.loop = true;
 
         video.onloadeddata = () => {
-            logToScreen("Vid Loaded");
-            video.play().catch(e => logToScreen("Auto-play blocked"));
+            console.log("Vid Loaded");
+            video.play().catch(e => console.warn("Auto-play blocked"));
         };
 
         video.onerror = (e) => {
-            logToScreen(`Vid Fail: ${vidPath}`);
+            console.error(`Vid Fail: ${vidPath}`);
             // Fallback to Image
             video.classList.add('hidden');
             img.classList.remove('hidden');
@@ -508,14 +508,14 @@ function updateBossUI() {
         img.src = targetImgPath;
 
         // Debug Loading
-        img.onload = () => logToScreen(`Img Loaded: ${targetImgPath}`);
+        img.onload = () => console.log(`Img Loaded: ${targetImgPath}`);
         img.onerror = () => {
-            logToScreen(`Img Fail: ${targetImgPath}`);
+            console.error(`Img Fail: ${targetImgPath}`);
             img.alt = "MISSING: " + targetImgPath;
         };
     }
 
-    logToScreen(`Lvl ${GAME.level} Boss ${bossIndex}`);
+    console.log(`Lvl ${GAME.level} Boss ${bossIndex}`);
 
     try {
         updateUI();
