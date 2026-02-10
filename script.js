@@ -254,6 +254,28 @@ window.checkPunishment = function () {
     }
 }
 
+window.redeemCode = function () {
+    const input = document.getElementById('throne-code-input');
+    const val = input.value.trim().toUpperCase();
+
+    // THE SECRET CODE
+    if (val === "OBEY" || val === "GODDESS") {
+        GAME.currentHP = 0; // Instakill boss
+        GAME.playerHP = GAME.playerMaxHP; // Full heal
+        GAME.energy = GAME.maxEnergy; // Full energy
+        GAME.money += 1000; // Bonus money
+
+        playSound('levelUp');
+        alert("ACCEPTED. THE GODDESS FAVORS YOU.");
+        closeModals();
+        handleVictory(); // Trigger win
+    } else {
+        playSound('hit');
+        alert("WRONG CODE. PAY MORE.");
+        input.value = "";
+    }
+}
+
 /* BATTLE MECHANICS - PLAYER TURN */
 window.useMove = function (moveType) {
     if (!GAME.isPlayerTurn || GAME.playerHP <= 0) return;
